@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+
+  database:
+    container_name: mariadb
+    image: mariadb:10-bionic
+    restart: on-failure
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql:rw
+    networks:
+      - docker-symfony
+
+  app:
+    container_name: php-fpm
+    image: symfony-docker/app:latest
+    restart: on-failure
+    build:
+      context: .
+      target: app_php
+    environment:
+      APP_ENV: dev
+      APP_DEBUG: 1
+    ports:
+      - 9000:9000
+    volumes:
+      - .:/var/www:rw,cached
+      - var:/var/www/var:rw
+    depends_on:
+      - database
+    networks:
+      - docker-symfony
+
+  server:
+    container_name: nginx
+    image: nginx:1.21.0-alpine
+    restart: on-failure
+    build:
+      context: .
+      target: app_nginx
+    ports:
+      - 8000:80
+    volumes:
+      - ./public:/var/www/public:ro
+    depends_on:
+      - app
+    networks:
+      - docker-symfony
+
+volumes:
+  var:
+  db-data:
+
+networks:
+  docker-symfony:
